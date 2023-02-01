@@ -17,13 +17,35 @@ void httpSetup(Router* router) {
         server.send(200, "text/plain", "UwU");
     });
 
+
+    server.on("/api/capabilities", []() {
+        auto r = Router::getInstance();
+        auto ser = BinarySerializer();
+        ser.writeInt(r->capatibilites.size());
+
+        for (const auto& pair : r->capatibilites) {
+            auto cap = pair.second;
+            ser.writeString(cap->route.c_str(), cap->route.size());
+            ser.writeString(cap->name.c_str(), cap->name.size());
+            ser.writeString(cap->description.c_str(), cap->description.size());
+            ser.writeString(cap->dataType.c_str(), cap->dataType.size());
+        }
+
+        Serial.println("sending");
+        Serial.println(ser.dataOffset);
+        auto str = base64_encode((unsigned char*)ser.data, ser.dataOffset);
+        server.send(200, "text/plain", str.c_str());
+    });
+
     for (const auto& pair : router->capatibilites) {
         auto cap = pair.second;
 
         server.on(cap->route.c_str(), HTTP_POST, [cap](){
             auto body = server.arg("plain");
+            auto bytes = base64_decode(body.c_str());
             auto r = Router::getInstance();
-            r->capabilitySet(cap->route, (void*)body.c_str());
+            Serial.println(bytes.size());
+            r->capabilitySet(cap->route, bytes.data());
             auto val = r->capabilityGet(cap->route);
             auto str = base64_encode((unsigned char*)val.data, val.size);
 

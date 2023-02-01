@@ -154,9 +154,10 @@ public:
     }
     std::string* readString(bool& err) override {
         auto size = readInt(err);
-        if (err) {
-            return nullptr;
-        }
+        // FIXME error == TRUE
+        // FIXME memory leaks
+        Serial.println("why");
+        Serial.println(size);
         auto str = new std::string;
         str->append(data+index, size);
         // std::cout << "reading string " << *str << std::endl;

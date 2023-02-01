@@ -68,7 +68,11 @@ public:
         return MyResponse{inner->data, &inner->description};
     }
     void input(Deserializer* deserializer) override {
+        bool err;
+        deserializer->readString(err);
         auto res = deserialize(deserializer, inner->description);
+        Serial.println("ahhheeeeeeeeeeeeeeeeeeeeeee");
+        Serial.println((byte) (*(byte*)res));
         inner->swap(static_cast<T*>(res));
     }
 
