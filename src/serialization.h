@@ -2,14 +2,15 @@
 // Created by vasabi on 29.1.23.
 //
 
-#ifndef EMBEDED_SERIALIZATION_H
-#define EMBEDED_SERIALIZATION_H
-
 #include <iostream>
 #include <string>
 #include <utility>
 #include <vector>
 #include <cstring>
+#include "util.h"
+
+#ifndef EMBEDED_SERIALIZATION_H
+#define EMBEDED_SERIALIZATION_H
 
 #define derefType(data, type, offset) *((type*)(data+offset))
 
@@ -74,18 +75,21 @@ class MockDeserializer: public Deserializer {
 class MockSerializer: public Serializer {
     bool writeBool(bool it) override {
         std::cout << "writing bool " << it << std::endl;
+        return true;
     }
 
     bool writeFloat(float it) override {
         std::cout << "writing float " << it << std::endl;
+        return true;
     }
 
     bool writeInt(int it) override {
         std::cout << "writing int " << it << std::endl;
-    }
+        return true;    }
 
     bool writeString(const char *it, int size) override {
         std::cout << "writing string " << it << std::endl;
+        return true;
     }
 };
 
@@ -106,6 +110,10 @@ public:
 
     bool writeFloat(float it) override {
         // std::cout << "writing float " << it << std::endl;
+        if (isBigEndian()) {
+            it = *(float*)reverseBytes(*(int*)&it);
+        }
+
         data = (char*)realloc(data, dataOffset+sizeof it);
         std::memcpy(data+dataOffset, &it, sizeof it);
         dataOffset += sizeof it;
@@ -114,6 +122,10 @@ public:
 
     bool writeInt(int it) override {
         // std::cout << "writing int " << it << std::endl;
+        if (isBigEndian()) {
+            it = reverseBytes(it);
+        }
+
         data = (char*)realloc(data, dataOffset+sizeof it);
         std::memcpy(data+dataOffset, &it, sizeof it);
         dataOffset += sizeof it;
@@ -138,6 +150,11 @@ public:
         auto v = derefType(data, int, index);
         // std::cout << "reading int " << v << std::endl;
         index += sizeof(int);
+
+        if (isBigEndian()) {
+            v = reverseBytes(v);
+        }
+
         return v;
     }
     bool readBool(bool& err) override {
@@ -150,14 +167,17 @@ public:
         auto v = derefType(data, float , index);
         // std::cout << "reading float " << v << std::endl;
         index += sizeof(float);
+
+        if (isBigEndian()) {
+            v = *(float*)reverseBytes(*(int*)&v);
+        }
+
         return v;
     }
     std::string* readString(bool& err) override {
         auto size = readInt(err);
         // FIXME error == TRUE
         // FIXME memory leaks
-        Serial.println("why");
-        Serial.println(size);
         auto str = new std::string;
         str->append(data+index, size);
         // std::cout << "reading string " << *str << std::endl;

@@ -30,4 +30,4 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/Router.h src/MyHttp.h src/base64.h src/MyTcp.h src/connection.h)
+add_executable(Z_DUMMY_TARGET ${SRC_LIST} src/Router.h src/MyHttp.h src/base64.h src/MyTcp.h src/connection.h src/MyBle.h src/util.h src/util.h)

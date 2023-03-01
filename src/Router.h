@@ -36,6 +36,7 @@
 #include <fstream>
 #include <stdexcept>
 #include "serialization.h"
+#include "connection.h"
 
 class MyResponse {
 public:
@@ -88,6 +89,7 @@ public:
 class Router {
 public:
     std::map<std::string, Capability*> capatibilites;
+    std::map<ConnectionType, Connection*> connections;
 
     static Router* getInstance() {
         static Router* instance;
@@ -103,6 +105,7 @@ public:
         // set, get, capabilities, ...
         std::unique_ptr<std::string> topLevel(des.readString(err));
         if (strcmp(topLevel->c_str(), "capabilities") == 0) {
+            return getCapabilities();
         }
         else if (strcmp(topLevel->c_str(), "get") == 0) {
             auto capatibilityRoute = std::unique_ptr<std::string>(des.readString(err));
@@ -147,6 +150,44 @@ public:
         auto res = capatibilites[route];
         auto des = BinaryDeserializer(data);
         res->input(&des);
+    }
+
+    void registerConnection(Connection* conn) {
+        connections[conn->type] = conn;
+    }
+
+    void handle() {
+        for (auto &c : connections) {
+            c.second->handle();
+        }
+    }
+
+    void enableConnection(ConnectionType connectionType) {
+        auto con = connections.find(connectionType);
+        if (con != connections.end()) {
+            con->second->enable(this);
+        }
+    }
+
+    void disableConnection(ConnectionType connectionType) {
+        auto con = connections.find(connectionType);
+        if (con != connections.end()) {
+            con->second->disable();
+        }
+    }
+
+    BinaryReference getCapabilities() {
+        auto ser = BinarySerializer();
+        ser.writeInt(capatibilites.size());
+
+        for (const auto& pair : capatibilites) {
+            auto cap = pair.second;
+            ser.writeString(cap->route.c_str(), cap->route.size());
+            ser.writeString(cap->name.c_str(), cap->name.size());
+            ser.writeString(cap->description.c_str(), cap->description.size());
+            ser.writeString(cap->dataType.c_str(), cap->dataType.size());
+        }
+        return BinaryReference{ser.dataOffset, ser.data};
     }
 };
 

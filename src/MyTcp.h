@@ -2,34 +2,67 @@
 // Created by vasabi on 29.1.23.
 //
 
+#include "util.h"
+
 #ifndef EMBEDED_XD_MYTCP_H
 #define EMBEDED_XD_MYTCP_H
 
 WiFiServer tcpServer(420);
 
-void tcpSetup() {
-    tcpServer.begin();
-}
+class TcpConnection: public Connection {
+    Router* router{};
+    bool isEnabled = false;
+public:
 
-void tcpHandle() {
-    auto r = Router::getInstance();
-
-    auto client = tcpServer.available();
-    if (!client.available()) return;
-    Serial.println("handling client / waiting");
-
-    int msgSize;
-    client.readBytes((char*)&msgSize, sizeof msgSize);
-    char buffer[msgSize];
-    auto size = client.readBytes(buffer, msgSize);
-    if (size < 4) {
-        Serial.println("warning ignoring tcp message");
-        return;
+    void enable(Router *router) override {
+        Serial.println("enabling tcp");
+        isEnabled = true;
+        this->router = router;
+        tcpServer.begin();
     }
 
-    auto res = r->handleRequest(buffer, size);
-    client.write((char*)&res.size, sizeof res.size);
-    client.write((char*)res.data, res.size);
-}
+    void disable() override {
+        tcpServer.stop();
+    }
+
+    void handle() override {
+        if (!isEnabled) return;
+
+        auto client = tcpServer.available();
+        if (!client.available()) return;
+        Serial.println("handling client / waiting");
+
+        int msgSize;
+        auto size = client.readBytes((char*)&msgSize, sizeof msgSize);
+        msgSize = reverseBytes(msgSize);
+
+        printf("msg size %d\n", msgSize);
+
+        if (size < 4) {
+            Serial.printf("read %d required 4 (msg len)\n", size);
+            return;
+        }
+
+
+        char buffer[msgSize];
+        size = client.readBytes(buffer, msgSize);
+
+        if (size < msgSize) {
+            Serial.printf("read %d required %d (msg data)\n", size, msgSize);
+            return;
+        }
+
+        auto res = router->handleRequest(buffer, size);
+        client.write((char*)&res.size, sizeof res.size);
+        client.write((char*)res.data, res.size);
+    }
+
+    void broadCast(void *data, int size) override {
+        // TODO
+        // tcpServer.availableForWrite();
+    }
+
+    TcpConnection() : Connection(Tcp) {}
+};
 
 #endif //EMBEDED_XD_MYTCP_H

@@ -5,6 +5,10 @@
 #ifndef EMBEDED_XD_CONNECTION_H
 #define EMBEDED_XD_CONNECTION_H
 
+#include "Router.h"
+
+class Router;
+
 enum ConnectionType {
     Tcp,
     Ws,
@@ -13,15 +17,16 @@ enum ConnectionType {
 };
 
 class Connection {
+public:
     ConnectionType type;
 
     virtual void disable() = 0;
-    virtual void enable() = 0;
+    virtual void enable(Router* router) = 0;
 
     virtual void handle() = 0;
-    virtual void sendAll(void* data, int size) = 0;
+    virtual void broadCast(void* data, int size) = 0;
 
-    explicit Connection(ConnectionType type) {
+    Connection(ConnectionType type) {
         this->type = type;
     }
 };

@@ -1,13 +1,15 @@
-
-
-
 #include <ESPmDNS.h>
 #include <WiFi.h>
-#include <WebServer.h>
 #include <Wire.h>
+#include <Arduino.h>
+
+#include <WebServer.h>
 #include "Router.h"
+#include "connection.h"
+
 #include "base64.h"
 #include "MyHttp.h"
+#include "serialization.h"
 #include "MyTcp.h"
 
 Router* router = Router::getInstance();
@@ -26,23 +28,30 @@ void setup() {
 
     if(!MDNS.begin(deviceName.c_str())) {
         Serial.println("Error starting mDNS");
-        return;
     }
 
     MDNS.setInstanceName(deviceName.c_str());
 
+    router->registerConnection(new SyncHttpConnection());
+    router->registerConnection(new TcpConnection());
+
+    router->enableConnection(Tcp);
+    router->enableConnection(Http);
+
     MDNS.addService("iotHttp", "tcp", 80);
     MDNS.addServiceTxt("iotHttp", "tcp", "identifier", identifier.c_str());
 
-    httpSetup(router);
+    MDNS.addService("iotTcp", "tcp", 420);
+    MDNS.addServiceTxt("iotTcp", "tcp", "identifier", identifier.c_str());
 
 
     pinMode(26, OUTPUT);
     *power.data = false;
+    // capabilities
 }
 
 void loop() {
-    httpHandle();
+    router->handle();
     delay(10);
     digitalWrite(26, *power.data);
 }
