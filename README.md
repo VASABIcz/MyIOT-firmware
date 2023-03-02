@@ -39,7 +39,6 @@ void setup() {
 
     // create wifi ap
     WiFi.softAP("to jsem ja", nullptr);
-    delay(1000);
 
 
     // register capabilities to router
