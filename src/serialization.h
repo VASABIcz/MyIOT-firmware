@@ -99,19 +99,18 @@ public:
     char* data = nullptr;
 
     bool writeBool(bool it) override {
-        // std::cout << "writing bool " << it << std::endl;
-        Serial.println("writing bool internal");
+        std::cout << "writing bool " << it << std::endl;
         data = (char*)realloc(data, dataOffset+sizeof it);
         std::memcpy(data+dataOffset, &it, sizeof it);
         dataOffset += sizeof it;
-        Serial.println("done writing bool internal");
         return true;
     }
 
     bool writeFloat(float it) override {
-        // std::cout << "writing float " << it << std::endl;
+        std::cout << "writing float " << it << std::endl;
         if (isBigEndian()) {
-            it = *(float*)reverseBytes(*(int*)&it);
+            auto rev = reverseBytes(*(int*)&it);
+            it = *(float*)rev;
         }
 
         data = (char*)realloc(data, dataOffset+sizeof it);
@@ -121,7 +120,7 @@ public:
     }
 
     bool writeInt(int it) override {
-        // std::cout << "writing int " << it << std::endl;
+        std::cout << "writing int " << it << std::endl;
         if (isBigEndian()) {
             it = reverseBytes(it);
         }
@@ -134,7 +133,7 @@ public:
 
     bool writeString(const char *it, int size) override {
         writeInt(size);
-        // std::cout << "writing string " << *it << std::endl;
+        std::cout << "writing string " << *it << std::endl;
         data = (char*)realloc(data, dataOffset+size);
         std::memcpy(data+dataOffset, it, size);
         dataOffset += size;
@@ -148,40 +147,38 @@ class BinaryDeserializer: public Deserializer {
 public:
     int readInt(bool& err) override {
         auto v = derefType(data, int, index);
-        // std::cout << "reading int " << v << std::endl;
         index += sizeof(int);
 
         if (isBigEndian()) {
             v = reverseBytes(v);
         }
+        std::cout << "reading int " << v << std::endl;
 
         return v;
     }
     bool readBool(bool& err) override {
         auto v = derefType(data, bool , index);
-        // std::cout << "reading bool " << v << std::endl;
+std::cout << "reading bool " << v << std::endl;
         index += sizeof(bool);
         return v;
     }
     float readFloat(bool& err) override {
         auto v = derefType(data, float , index);
-        // std::cout << "reading float " << v << std::endl;
         index += sizeof(float);
 
         if (isBigEndian()) {
             v = *(float*)reverseBytes(*(int*)&v);
         }
+        std::cout << "reading float " << v << std::endl;
 
         return v;
     }
     std::string* readString(bool& err) override {
         auto size = readInt(err);
-        // FIXME error == TRUE
-        // FIXME memory leaks
         auto str = new std::string;
         str->append(data+index, size);
-        // std::cout << "reading string " << *str << std::endl;
         index += size;
+        std::cout << "reading string " << *str << std::endl;
         return str;
     }
 
@@ -289,7 +286,6 @@ void serialize(const char* data, std::vector<ClassDescription> description, Seri
         std::vector<void*>* a;
         std::vector<ClassDescription> buf;
         int listIgnore = 0;
-        Serial.println("ahhh");
         switch (description[n]) {
             case Int:
                 serializer->writeInt(derefType(data, int, dataIndex));
@@ -300,10 +296,8 @@ void serialize(const char* data, std::vector<ClassDescription> description, Seri
                 dataIndex += sizeof(float);
                 break;
             case Bool:
-                Serial.println("writing bool");
                 serializer->writeBool(derefType(data, bool, dataIndex));
                 dataIndex += sizeof(bool);
-                Serial.println("i am here");
                 break;
             case String:
                 s = derefType(data, std::string*, dataIndex);
@@ -335,7 +329,6 @@ void serialize(const char* data, std::vector<ClassDescription> description, Seri
                 break;
         }
     }
-    Serial.println("returning");
 }
 
 #endif //EMBEDED_SERIALIZATION_H

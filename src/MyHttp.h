@@ -53,26 +53,33 @@ public:
             auto cap = pair.second;
 
             server.on(cap->route.c_str(), HTTP_POST, [cap](){
+                auto ser = BinarySerializer();
+                Serial.println("received post request");
+
                 auto body = server.arg("plain");
                 auto bytes = base64_decode(body.c_str());
                 auto r = Router::getInstance();
-                Serial.println(bytes.size());
-                r->capabilitySet(cap->route, bytes.data());
-                auto val = r->capabilityGet(cap->route);
-                auto str = base64_encode((unsigned char*)val.data, val.size);
+
+                auto des = BinaryDeserializer(bytes.data());
+                bool err;
+                des.readString(err);
+
+                r->capabilitySet(cap->route, des);
+                r->capabilityGet(cap->route, ser);
+
+                auto str = base64_encode((unsigned char*)ser.data, ser.dataOffset);
 
                 server.send(200, "text/plain", str.c_str());
             });
             server.on(cap->route.c_str(), HTTP_GET, [cap](){
+                auto ser = BinarySerializer();
                 Serial.println("received get request");
                 auto r = Router::getInstance();
-                Serial.println("got router instance");
-                Serial.println((unsigned long int)cap);
-                Serial.println((unsigned long int)r);
-                auto val = r->capabilityGet(cap->route);
-                Serial.println("marshaled data");
-                auto str = base64_encode((unsigned char*)val.data, val.size);
-                Serial.println("b64 encoded data");
+
+                r->capabilityGet(cap->route, ser);
+
+
+                auto str = base64_encode((unsigned char*)ser.data, ser.dataOffset);
 
                 server.send(200, "text/plain", str.c_str());
             });

@@ -69,10 +69,7 @@ public:
         return MyResponse{inner->data, &inner->description};
     }
     void input(Deserializer* deserializer) override {
-        bool err;
-        deserializer->readString(err);
         auto res = deserialize(deserializer, inner->description);
-        Serial.println("ahhheeeeeeeeeeeeeeeeeeeeeee");
         Serial.println((byte) (*(byte*)res));
         inner->swap(static_cast<T*>(res));
     }
@@ -102,19 +99,44 @@ public:
     BinaryReference handleRequest(void* data, int length) {
         bool err;
         auto des = BinaryDeserializer(data);
-        // set, get, capabilities, ...
+
         std::unique_ptr<std::string> topLevel(des.readString(err));
+
+        std::cout << "handling " << *topLevel << std::endl;
+
         if (strcmp(topLevel->c_str(), "capabilities") == 0) {
-            return getCapabilities();
+            auto ser = BinarySerializer();
+            ser.writeString("capabilities", 12);
+
+            return getCapabilities(ser);
         }
         else if (strcmp(topLevel->c_str(), "get") == 0) {
+            auto ser = BinarySerializer();
+            ser.writeString("value", 5);
+
             auto capatibilityRoute = std::unique_ptr<std::string>(des.readString(err));
-            return capabilityGet(*capatibilityRoute);
+
+            if (!capabilityGet(*capatibilityRoute, ser)) {
+                Serial.println("failed to serialize get msg");
+                return BinaryReference{};
+            }
+
+            return BinaryReference{ser.dataOffset, ser.data};
         }
-        else if (strcmp(topLevel->c_str(), "set") == 0) {
+        else if (strcmp(topLevel->c_str(), "post") == 0) {
             auto capatibilityRoute = std::unique_ptr<std::string>(des.readString(err));
-            auto res = capatibilites[*capatibilityRoute];
+            auto cap = capatibilites.find(*capatibilityRoute);
+            if (cap == capatibilites.end()) {
+                Serial.printf("capability with route %s doesnt exist \n", capatibilityRoute->c_str());
+                return BinaryReference{};
+            }
+            auto res = cap->second;
+
+            // auto dataType = std::unique_ptr<std::string>(des.readString(err));
+            // std::cout << "post data type " << *dataType << std::endl;
+
             res->input(&des);
+
             return BinaryReference{};
         }
         return BinaryReference{};
@@ -126,29 +148,34 @@ public:
         capatibilites[route] = cap;
     }
 
-    BinaryReference capabilityGet(const std::string& route) {
-        auto res = capatibilites.find(route)->second;
-        Serial.println("capabiliters");
-        Serial.println(capatibilites.size());
-        Serial.println((unsigned long) res);
-        Serial.println("got capability");
+    bool capabilityGet(const std::string& route, Serializer& ser) {
+        auto cap = capatibilites.find(route);
+        if (cap == capatibilites.end()) {
+            Serial.printf("capability with route %s doesnt exist \n", route.c_str());
+            return false;
+        }
+        auto res = cap->second;
+
         auto output = res->output();
         Serial.println("capability returned response");
-        auto ser = BinarySerializer();
-        Serial.println("created serializer");
-        Serial.println((unsigned long )output.data);
+
+        Serial.println("START data description");
         for (auto a : *output.description) {
             Serial.println(a);
         }
+        Serial.println("END data description");
+
+        // ser.writeString(res->route.c_str(), res->route.size());
         ser.writeString(res->dataType.c_str(), res->dataType.size());
         serialize((char*)output.data, *output.description, &ser);
+
         Serial.println("successfully serialized");
-        return BinaryReference{ser.dataOffset, ser.data};
+
+        return true;
     }
 
-    void capabilitySet(const std::string& route, void* data) {
+    void capabilitySet(const std::string& route, Deserializer& des) {
         auto res = capatibilites[route];
-        auto des = BinaryDeserializer(data);
         res->input(&des);
     }
 
@@ -176,8 +203,7 @@ public:
         }
     }
 
-    BinaryReference getCapabilities() {
-        auto ser = BinarySerializer();
+    BinaryReference getCapabilities(BinarySerializer& ser) {
         ser.writeInt(capatibilites.size());
 
         for (const auto& pair : capatibilites) {

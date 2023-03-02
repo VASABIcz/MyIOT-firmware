@@ -53,7 +53,18 @@ public:
         }
 
         auto res = router->handleRequest(buffer, size);
-        client.write((char*)&res.size, sizeof res.size);
+        int rawSize;
+
+        if (isBigEndian()) {
+            rawSize = reverseBytes(res.size);
+        }
+        else {
+            rawSize = res.size;
+        }
+
+        printf("sending tcp %d\n", res.size);
+
+        client.write((char*)&rawSize, sizeof res.size);
         client.write((char*)res.data, res.size);
     }
 
