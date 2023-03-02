@@ -14,6 +14,7 @@
 
 Router* router = Router::getInstance();
 Serializable<bool> power(std::vector<ClassDescription>{Bool});
+Serializable<int> speed(std::vector<ClassDescription>{Int});
 std::string deviceName = "test device";
 std::string identifier = "123123";
 
@@ -25,6 +26,7 @@ void setup() {
 
     // 20 + 6 + 7 + 6 + 4
     router->createCapability<bool>("switch", "/switch", "switch", "bool", &power);
+    router->createCapability<int>("speed", "/speed", "speed", "int", &speed);
 
     if(!MDNS.begin(deviceName.c_str())) {
         Serial.println("Error starting mDNS");

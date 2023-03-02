@@ -132,9 +132,6 @@ public:
             }
             auto res = cap->second;
 
-            // auto dataType = std::unique_ptr<std::string>(des.readString(err));
-            // std::cout << "post data type " << *dataType << std::endl;
-
             res->input(&des);
 
             return BinaryReference{};
