@@ -14,7 +14,6 @@ class TcpConnection: public Connection {
     bool isEnabled = false;
     std::vector<WiFiClient> clients;
 public:
-
     void enable(Router *router) override {
         Serial.println("enabling tcp");
         isEnabled = true;
