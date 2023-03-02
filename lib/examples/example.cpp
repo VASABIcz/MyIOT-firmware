@@ -15,6 +15,7 @@
 
 
 // create router
+// router manages devices connections and capabilities
 Router* router = Router::getInstance();
 
 // declare device capabilities
@@ -37,6 +38,13 @@ void setup() {
 
 
     // register capabilities to router
+    /*
+     * name
+     * route
+     * description
+     * dataType
+     * serializable
+     */
     router->createCapability<bool>("switch", "/switch", "switch", "bool", &power);
     router->createCapability<int>("speed", "/speed", "speed", "int", &speed);
 
